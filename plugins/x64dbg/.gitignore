@@ -1,0 +1,11 @@
+.vs/
+bin/
+Debug/
+Release/
+*.vcxproj.user
+*.VC.db
+.vs/
+Release/
+Debug/
+x64/
+*.vcxproj.user
