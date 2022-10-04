@@ -1,0 +1,34 @@
+{
+  "pluginmetadataversion": 2,
+  "name": "REToolSync",
+  "type": [
+    "core",
+    "ui",
+    "architecture",
+    "binaryview",
+    "helper"
+  ],
+  "api": [
+    "python3"
+  ],
+  "description": "Improve your reverse engineering workflow.",
+  "longdescription": "",
+  "platforms": [
+    "Darwin",
+    "Linux",
+    "Windows"
+  ],
+  "installinstructions": {
+    "Darwin": "Install the following pip packages: ...\n\nInstall the following brew packages: ...",
+    "Linux": "Install the following pip packages: ...\n\nInstall the following apt packages: ...",
+    "Windows": "Install the following pip packages: ...\n\nInstall the following libraries: ..."
+  },
+  "dependencies": {
+    "pip": [
+      "tornado"
+    ]
+  },
+  "version": "0.1.0",
+  "author": "mrexodia",
+  "minimumbinaryninjaversion": 3164
+}
