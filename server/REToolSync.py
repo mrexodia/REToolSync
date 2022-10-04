@@ -74,13 +74,25 @@ class ClientsHandler(tornado.web.RequestHandler):
             clients.append(client.info)
         self.write(json.dumps(clients))
 
+class GotoHandler(tornado.web.RequestHandler):
+    def post(self):
+        address = self.get_query_argument("address")
+        WebSocketServer.send_message(json.dumps({
+            "request": "goto",
+            "address": address,
+        }))
+        self.write(f"Notified {len(WebSocketServer.clients)} clients")
 
 def main():
     # TODO: configuration
     ip, port = "127.0.0.1", 6969
 
     app = tornado.web.Application(
-        [(r"/REToolSync", WebSocketServer), (r"/api/clients", ClientsHandler)],
+        [
+            (r"/REToolSync", WebSocketServer),
+            (r"/api/clients", ClientsHandler),
+            (r"/api/goto", GotoHandler),
+        ],
         websocket_ping_interval=10,
         websocket_ping_timeout=30,
     )
