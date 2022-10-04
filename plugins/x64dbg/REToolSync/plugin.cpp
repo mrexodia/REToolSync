@@ -104,7 +104,8 @@ struct Cursor
 	std::string sha1;
 	std::string md5;
 	uint32_t TimeDateStamp = -1;
-	uint64_t imagebase = -1; // should this be the currently loaded imagebase (probably yes) or the one in the header?
+	uint64_t loadedbase = -1; // image base as loaded in memory
+	uint64_t imagebase = -1; // image base in the header
 	uint32_t imagesize = -1;
 
 	void dump() const
@@ -122,7 +123,7 @@ struct Cursor
 	static uint64_t fromHex(const std::string& text)
 	{
 		uint64_t value = 0;
-		if (sscanf_s(text.c_str(), "0x%" SCNx64, &value) != 1)
+		if (sscanf_s(text.c_str(), "0x%" SCNx64, &value) != 1 && sscanf_s(text.c_str(), "%" SCNx64, &value) != 1)
 			throw std::invalid_argument("fromHex failed");
 		return value;
 	}
@@ -148,6 +149,7 @@ struct Cursor
 		j["sha1"] = sha1;
 		j["md5"] = md5;
 		j["TimeDateStamp"] = toHex(TimeDateStamp);
+		j["loadedbase"] = toHex(loadedbase);
 		j["imagebase"] = toHex(imagebase);
 		j["imagesize"] = toHex(imagesize);
 		return j.dump(indent);
@@ -168,6 +170,7 @@ struct Cursor
 			c.sha1 = j["sha1"];
 			c.md5 = j["md5"];
 			c.TimeDateStamp = (uint32_t)fromHex(j["TimeDateStamp"]);
+			c.loadedbase = fromHex(j["loadedbase"]);
 			c.imagebase = fromHex(j["imagebase"]);
 			c.imagesize = (uint32_t)fromHex(j["imagesize"]);
 		}
@@ -210,20 +213,6 @@ struct Cursor
 static CRITICAL_SECTION crModules;
 static std::unordered_map<duint, Cursor> modules;
 
-PLUG_EXPORT void CBSTOPDEBUG(CBTYPE cbType, PLUG_CB_STOPDEBUG* info)
-{
-	EnterCriticalSection(&crModules);
-	modules.clear();
-	LeaveCriticalSection(&crModules);
-}
-
-PLUG_EXPORT void CBUNLOADDLL(CBTYPE cbType, PLUG_CB_UNLOADDLL* info)
-{
-	EnterCriticalSection(&crModules);
-	modules.erase((duint)info->UnloadDll->lpBaseOfDll);
-	LeaveCriticalSection(&crModules);
-}
-
 static void getCursorPeData(const wchar_t* filename, Cursor& c)
 {
 	HANDLE hFile = CreateFileW(filename, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, 0, nullptr);
@@ -246,7 +235,7 @@ static void getCursorPeData(const wchar_t* filename, Cursor& c)
 						if (nth.Signature == IMAGE_NT_SIGNATURE)
 						{
 							c.TimeDateStamp = nth.FileHeader.TimeDateStamp;
-							//c.imagebase = nth.OptionalHeader.ImageBase;
+							c.imagebase = nth.OptionalHeader.ImageBase;
 							c.imagesize = nth.OptionalHeader.SizeOfImage;
 						}
 					}
@@ -270,7 +259,7 @@ static void getCursorData(duint base, Cursor& c)
 		c.md5 = md5file(wmodpath.c_str());
 	}
 
-	c.imagebase = base;
+	c.loadedbase = base;
 
 	getCursorPeData(wmodpath.c_str(), c);
 }
@@ -296,6 +285,27 @@ static void getModBaseCursor(duint base, Cursor& c)
 	}
 }
 
+PLUG_EXPORT void CBSTOPDEBUG(CBTYPE cbType, PLUG_CB_STOPDEBUG* info)
+{
+	EnterCriticalSection(&crModules);
+	modules.clear();
+	LeaveCriticalSection(&crModules);
+}
+
+PLUG_EXPORT void CBLOADDLL(CBTYPE cbType, PLUG_CB_LOADDLL* info)
+{
+	// TODO: move to a worker thread
+	Cursor c;
+	getModBaseCursor((duint)info->LoadDll->lpBaseOfDll, c);
+}
+
+PLUG_EXPORT void CBUNLOADDLL(CBTYPE cbType, PLUG_CB_UNLOADDLL* info)
+{
+	EnterCriticalSection(&crModules);
+	modules.erase((duint)info->UnloadDll->lpBaseOfDll);
+	LeaveCriticalSection(&crModules);
+}
+
 static bool updateCursor(GUISELECTIONTYPE hWindow, Cursor& c)
 {
 	if (DbgIsDebugging())
@@ -314,6 +324,50 @@ static bool updateCursor(GUISELECTIONTYPE hWindow, Cursor& c)
 		}
 	}
 	return false;
+}
+
+template<typename... Args>
+void cmd(const char* format, Args... args)
+{
+	char command[256] = "";
+	_snprintf_s(command, _TRUNCATE, format, args...);
+	dprintf("cmd(%s)\n", command);
+	DbgCmdExecDirect(command);
+}
+
+static void requestGoto(duint address)
+{
+	dprintf("goto %p\n", address);
+	const Cursor* foundModule = nullptr;
+	auto mainbase = Script::Module::GetMainModuleBase();
+	duint basereloc = 0;
+	EnterCriticalSection(&crModules);
+	for (const auto& itr : modules)
+	{
+		const auto& mod = itr.second;
+		if (address >= mod.loadedbase && address < mod.loadedbase + mod.imagesize)
+		{
+			// Matches the loaded base in memory
+			foundModule = &mod;
+			basereloc = mod.loadedbase;
+		}
+		else if (address >= mod.imagebase && address < mod.imagebase + mod.imagesize)
+		{
+			// Matches the image base on disk
+			foundModule = &mod;
+			basereloc = mod.imagebase;
+		}
+		if (foundModule != nullptr && foundModule->loadedbase == mainbase)
+			break;
+	}
+	LeaveCriticalSection(&crModules);
+	if (foundModule == nullptr)
+		throw std::runtime_error("Faild to find module!");
+	dprintf("found %s %p %p\n", foundModule->filepath.c_str(), foundModule->loadedbase, basereloc);
+	auto rva = address - basereloc;
+	auto va = foundModule->loadedbase + rva;
+	cmd("disasm 0x%p", va);
+	cmd("dump 0x%p", va);
 }
 
 static DWORD WINAPI WebSocketThread(LPVOID)
@@ -357,9 +411,24 @@ static DWORD WINAPI WebSocketThread(LPVOID)
 		}
 		ws->poll(20);
 		ws->dispatch([](const std::string& message)
+		{
+			dprintf("message: %s\n", message.c_str());
+			try
 			{
-				dprintf("message: %s\n", message.c_str());
-			});
+				auto j = nlohmann::json::parse(message);
+				auto request = j["request"].get<std::string>();
+				if (request == "goto")
+				{
+					auto data = j["address"].get<std::string>();
+					auto address = Cursor::fromHex(data);
+					requestGoto(address);
+				}
+			}
+			catch (std::exception& x)
+			{
+				dprintf("exception: %s\n", x.what());
+			}
+		});
 		if (bStopWebSocketThread && ws->getReadyState() != WebSocket::CLOSING)
 			ws->close();
 	}
