@@ -62,8 +62,23 @@ class WebSocketServer(tornado.websocket.WebSocketHandler):
         for client in cls.clients:
             client.write_message(message)
 
+# Relevant reading:
+# - https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
+# - https://developer.chrome.com/blog/private-network-access-preflight/
+# - https://wicg.github.io/private-network-access
+# - https://stackoverflow.com/a/66555660
+class CorsHandler(tornado.web.RequestHandler):
+    def set_default_headers(self):
+        self.set_header("Access-Control-Allow-Origin", "*")
 
-class ClientsHandler(tornado.web.RequestHandler):
+    def options(self, *args):
+        self.set_header("Access-Control-Allow-Methods", "*")
+        self.set_header("Access-Control-Request-Credentials", "true")
+        self.set_header("Access-Control-Allow-Private-Network", "true")
+        self.set_header("Access-Control-Allow-Headers", "*")
+        self.set_status(204)  # No Content
+
+class ClientsHandler(CorsHandler):
     def set_default_headers(self):
         self.set_header("Content-Type", 'application/json')
 
@@ -74,7 +89,7 @@ class ClientsHandler(tornado.web.RequestHandler):
             clients.append(client.info)
         self.write(json.dumps(clients))
 
-class GotoHandler(tornado.web.RequestHandler):
+class GotoHandler(CorsHandler):
     def post(self):
         address = self.get_query_argument("address")
         WebSocketServer.send_message(json.dumps({
