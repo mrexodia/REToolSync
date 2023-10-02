@@ -191,6 +191,10 @@ def get_selection() -> Tuple[bool, int, int]:
         return idaapi.read_range_selection(None)
     return idaapi.read_selection()
 
+@idaread
+def goto_address(address: int) -> None:
+    return ida_kernwin.jumpto(address)
+
 # Reference: https://www.georgeho.org/tornado-websockets/
 # IDAPython cheat sheet: https://gist.github.com/icecr4ck/7a7af3277787c794c66965517199fc9c
 # https://github.com/inforion/idapython-cheatsheet
@@ -231,7 +235,7 @@ class WebSocketClient:
         else:
             cursor_info["selection_start"] = None
             cursor_info["selection_end"] = None
-        
+
 
         if not cursor_info == self.cursor_info:
             print(f"[REToolSync] cursor change: ({json.dumps(self.cursor_info)}) -> ({json.dumps(cursor_info)})")
@@ -249,7 +253,7 @@ class WebSocketClient:
                 start, end = end, start
             print(f"[REToolSync] range selection: ({ok}, {hex(start)}, {hex(end - 1)})")
             self.last_selection = selection
-        
+
         cursor = get_cursor()
         if not cursor == self.last_cursor:
             print(f"[REToolSync] sending cursor change {hex(self.last_cursor)} -> {hex(cursor)}")
@@ -286,7 +290,7 @@ class WebSocketClient:
             print(f"[REToolSync] exception: {x}, {type(x)}")
             raise x
 
-    def on_message(self, message):
+    def on_message(self, message: str):
         if message is None:
             print("[REToolSync] Disconnected, reconnecting in 3 seconds...")
             self.periodic_cb.stop()
@@ -294,7 +298,15 @@ class WebSocketClient:
             return
 
         self.num_messages += 1
-        print(f"[REToolSync] message: {message}")
+
+        msg: dict = json.loads(message)
+        request = msg.get("request", None)
+        if request == "goto":
+            address = int(msg["address"], 16)
+            print(f"[REToolSync] Goto: {hex(address)}")
+            goto_address(address)
+        else:
+            print(f"[REToolSync] Unsupported message: {message}")
 
     def write_message(self, message):
         if self.connection:
