@@ -1,0 +1,6 @@
+# cmkr
+build*/
+cmake-build*/
+.idea/
+.vscode/
+.cache/
