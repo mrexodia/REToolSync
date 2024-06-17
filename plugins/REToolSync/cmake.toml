@@ -1,0 +1,14 @@
+# Reference: https://build-cpp.github.io/cmkr/cmake-toml
+[project]
+name = "REToolSync"
+
+[target.REToolSync]
+type = "shared"
+sources = ["src/REToolSync/*.cpp"]
+headers = [
+    "include/REToolSync/*.h",
+    "include/REToolSync/*.hpp",
+    "include/*.hpp",
+    "include/*.h",
+]
+compile-features = ["cxx_std_20"]
