@@ -158,10 +158,17 @@ def idaread(f):
 # This freezes and doesn't gracefully error
 # @idaread
 def get_image_size():
-    # https://www.hex-rays.com/products/ida/support/sdkdoc/structidainfo.html
-    info = idaapi.get_inf_structure()
+    try:
+        # https://www.hex-rays.com/products/ida/support/sdkdoc/structidainfo.html
+        info = idaapi.get_inf_structure()
+        omin_ea = info.omin_ea
+        omax_ea = info.omax_ea
+    except AttributeError:
+        import ida_ida
+        omin_ea = ida_ida.inf_get_omin_ea()
+        omax_ea = ida_ida.inf_get_omax_ea()
     # Bad heuristic for image size (bad if the relocations are the last section)
-    image_size = info.omax_ea - info.omin_ea
+    image_size = omax_ea - omin_ea
     # Try to extract it from the PE header
     header = idautils.peutils_t().header()
     if header and header[:4] == b"PE\0\0":
