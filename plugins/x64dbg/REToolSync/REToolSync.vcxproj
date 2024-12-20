@@ -27,28 +27,28 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140_xp</PlatformToolset>
+    <PlatformToolset>v141_xp</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140_xp</PlatformToolset>
+    <PlatformToolset>v141_xp</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140_xp</PlatformToolset>
+    <PlatformToolset>v141_xp</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140_xp</PlatformToolset>
+    <PlatformToolset>v141_xp</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -103,6 +103,12 @@
       <OptimizeReferences>true</OptimizeReferences>
       <SubSystem>Windows</SubSystem>
     </Link>
+    <PreLinkEvent>
+      <Command>if exist "$(ProjectDir)PluginDevBuildTool.exe" ("$(ProjectDir)PluginDevBuildTool.exe" unload "$(TargetPath)")</Command>
+    </PreLinkEvent>
+    <PostBuildEvent>
+      <Command>if exist "$(ProjectDir)PluginDevBuildTool.exe" ("$(ProjectDir)PluginDevBuildTool.exe" reload "$(TargetPath)")</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -123,6 +129,12 @@
       <SubSystem>Windows</SubSystem>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
+    <PreLinkEvent>
+      <Command>if exist "$(ProjectDir)PluginDevBuildTool.exe" ("$(ProjectDir)PluginDevBuildTool.exe" unload "$(TargetPath)")</Command>
+    </PreLinkEvent>
+    <PostBuildEvent>
+      <Command>if exist "$(ProjectDir)PluginDevBuildTool.exe" ("$(ProjectDir)PluginDevBuildTool.exe" reload "$(TargetPath)")</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -139,6 +151,12 @@
       <OptimizeReferences>true</OptimizeReferences>
       <SubSystem>Windows</SubSystem>
     </Link>
+    <PreLinkEvent>
+      <Command>if exist "$(ProjectDir)PluginDevBuildTool.exe" ("$(ProjectDir)PluginDevBuildTool.exe" unload "$(TargetPath)")</Command>
+    </PreLinkEvent>
+    <PostBuildEvent>
+      <Command>if exist "$(ProjectDir)PluginDevBuildTool.exe" ("$(ProjectDir)PluginDevBuildTool.exe" reload "$(TargetPath)")</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -159,6 +177,12 @@
       <SubSystem>Windows</SubSystem>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
+    <PreLinkEvent>
+      <Command>if exist "$(ProjectDir)PluginDevBuildTool.exe" ("$(ProjectDir)PluginDevBuildTool.exe" unload "$(TargetPath)")</Command>
+    </PreLinkEvent>
+    <PostBuildEvent>
+      <Command>if exist "$(ProjectDir)PluginDevBuildTool.exe" ("$(ProjectDir)PluginDevBuildTool.exe" reload "$(TargetPath)")</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="easywsclient.cpp" />

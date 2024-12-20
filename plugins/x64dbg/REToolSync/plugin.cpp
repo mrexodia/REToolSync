@@ -110,7 +110,7 @@ struct Cursor
 
 	void dump() const
 	{
-		dputs(serialize(2).c_str());
+		//dputs(serialize(2).c_str());
 	}
 
 	static std::string toHex(uint64_t value)
@@ -374,13 +374,14 @@ static DWORD WINAPI WebSocketThread(LPVOID)
 {
 	auto url = std::string("ws://") + endpoint + "/REToolSync";
 	auto userAgent = "REToolSync x64dbg " + std::to_string(GetCurrentProcessId());
-	dprintf("Connecting to %s ...\n", url.c_str());
+	dprintf("Connecting to %s\n", url.c_str());
 	std::unique_ptr<WebSocket> ws(WebSocket::from_url(url, {}, userAgent));
 	if (!ws)
 	{
-		dprintf("Connection failed!\n", url.c_str());
+		dprintf("Failed to connect\n");
 		return 0;
 	}
+	dprintf("Successfully connected to %s\n", url.c_str());
 
 	Cursor cursor; // TODO: keep track of multiple
 	DWORD sendTime = GetTickCount();
@@ -402,7 +403,7 @@ static DWORD WINAPI WebSocketThread(LPVOID)
 				if (json != c2.serialize())
 				{
 					dputs("round trip failed...");
-					dputs(c2.serialize().c_str());
+					//dputs(c2.serialize().c_str());
 				}
 
 				ws->send(json);
@@ -510,7 +511,7 @@ static bool getCursors(std::vector<Cursor>& cs)
 	if (pData.empty())
 		return false;
 
-	dputs(pData.c_str());
+	//dputs(pData.c_str());
 	return Cursor::deserialize(pData.c_str(), cs);
 }
 
