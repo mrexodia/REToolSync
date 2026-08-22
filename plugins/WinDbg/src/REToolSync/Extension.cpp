@@ -42,7 +42,7 @@ Cursor g_CurrentStateCursor;
 Cursor g_PrevCursor;
 HANDLE g_Mutex;
 HANDLE g_ThreadHandle = INVALID_HANDLE_VALUE;
-BOOLEAN g_StopThread = false;
+std::atomic_bool g_StopThread;
 
 /*
 // TODO: Fix this
@@ -148,24 +148,36 @@ DWORD __stdcall WebSocketThreadProc(LPVOID Unused) {
     LOG(LOG_DEBUG, "Connected to server!");
   }
 
-  while (ws->getReadyState() != easywsclient::WebSocket::CLOSED) {
+  while (ws && ws->getReadyState() != easywsclient::WebSocket::CLOSED) {
     WaitForSingleObject(g_Mutex, INFINITE);
     ws->poll(20);
     ws->dispatch([](const std::string &message) {
       Log(LOG_DEBUG, "Received message: %s", message.c_str());
     });
+    if (g_StopThread && ws->getReadyState() != easywsclient::WebSocket::CLOSING) {
+      LOG(LOG_DEBUG, "Closing WebSocket connection");
+      ws->close();
+    }
     ReleaseMutex(g_Mutex);
   }
 
   if (ws->getReadyState() == easywsclient::WebSocket::CLOSED) {
     LOG(LOG_DEBUG, "Disconnected from server!");
   }
-  ReconnectWebsocket();
+  //ReconnectWebsocket();
   return 0;
 }
 
+static void CloseWebsocket() {
+    if (g_ThreadHandle) {
+      g_StopThread = true;
+	  WaitForSingleObject(g_ThreadHandle, INFINITE);
+      g_ThreadHandle = NULL;
+    }
+}
+
 void ReconnectWebsocket() {
-  CloseHandle(g_Mutex);
+  CloseWebsocket();
   LOG(LOG_DEBUG, "Reconnecting to server!");
   std::this_thread::sleep_for(std::chrono::seconds(3));
   g_ThreadHandle =
@@ -288,6 +300,7 @@ extern "C" __declspec(dllexport) HRESULT CALLBACK
 
   HRESULT hr = InitGlobals();
   if (FAILED(hr)) {
+	LOG(LOG_ERROR, "Failed to initialize globals");
     return hr;
   }
 
@@ -298,21 +311,19 @@ extern "C" __declspec(dllexport) HRESULT CALLBACK
 
   LOG(LOG_DEBUG, "Extension Loaded!");
 
-  if (FAILED(hr)) {
-    return hr;
-  }
-
   // hr = g_DbgClient->SetEventCallbacks(&g_EventCallbacks);
 
   hr = g_DbgClient->GetEventCallbacks(&callbacks);
-
   if (FAILED(hr)) {
+    LOG(LOG_ERROR, "Failed to get event callbacks");
+    CloseWebsocket();
     return hr;
   }
 
   auto ret = get_cursors();
-
   if (ret == false) {
+	LOG(LOG_ERROR, "Failed to get cursors");
+    CloseWebsocket();
     return E_FAIL;
   }
 
@@ -366,9 +377,7 @@ extern "C" __declspec(dllexport) HRESULT CALLBACK DebugExtensionUninitialize() {
   g_DbgClient->Release();
   // g_EventCallbacks.Release();
   g_DbgReg->Release();
-  g_StopThread = true;
-
-  ws->close();
+  CloseWebsocket();
 
   return S_OK;
 }

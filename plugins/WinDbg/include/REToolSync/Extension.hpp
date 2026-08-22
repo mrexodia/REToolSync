@@ -18,10 +18,6 @@ extern Microsoft::WRL::ComPtr<IDebugClient5> g_DbgClient;
 extern Microsoft::WRL::ComPtr<IDebugAdvanced4> g_DbgAdv;
 extern Microsoft::WRL::ComPtr<IDebugRegisters> g_DbgReg;
 extern Microsoft::WRL::ComPtr<IDebugSymbols3> g_DbgSym;
-extern CRITICAL_SECTION g_CritSection;
-extern HANDLE g_WsThreadHandle;
-
-// extern Cursor g_CurrentStateCursor;
 
 enum LogLevel {
   LOG_ERROR = 0,
